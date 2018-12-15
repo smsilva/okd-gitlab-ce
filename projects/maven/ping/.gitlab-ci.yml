@@ -1,0 +1,35 @@
+stages:
+  - Build
+  - Image
+
+cache:
+  key: "$CI_JOB_NAME"
+  paths:
+    - .m2/
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2"
+  LATEST_VER: smsilva/ping:latest
+  MINOR_VER: smsilva/ping:1.0
+
+maven build:
+  image: maven:latest
+  stage: Build
+  script:
+    - mvn package
+  artifacts:
+    paths:
+      - target/*.war
+
+docker build:
+  image: docker:stable
+  stage: Image
+  script:
+    - docker info
+    - find target/
+    - docker build -t $MINOR_VER -t $LATEST_VER .
+    - docker login -u okd -p XcKECl4JT0OMab9sKJAZvECCASRRWjO7S1dma8IIvUU docker-registry.default.svc:5000
+    - docker tag smsilva/ping:latest docker-registry.default.svc:5000/ping-example/ping:latest
+    - docker tag smsilva/ping:latest docker-registry.default.svc:5000/ping-example/ping:1.0
+    - docker push docker-registry.default.svc:5000/ping-example/ping:latest
+    - docker push docker-registry.default.svc:5000/ping-example/ping:1.0

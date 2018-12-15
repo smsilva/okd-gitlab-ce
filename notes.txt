@@ -116,3 +116,11 @@ done
     Insecure = false
 
 oc get scc
+
+#################
+
+docker login -u silvio -p XcKECl4JT0OMab9sKJAZvECCASRRWjO7S1dma8IIvUU docker-registry.default.svc:5000
+
+docker tag smsilva/ping:latest docker-registry.default.svc:5000/ping-example/ping:latest
+
+docker push docker-registry.default.svc:5000/ping-example/ping:latest

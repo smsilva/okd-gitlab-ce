@@ -64,6 +64,7 @@ objects:
         --executor kubernetes
       sed -i '/runners.cache\]/ a \    Type = "s3" \n \   Path = "files/" \n \   Shared = true' /etc/gitlab-runner/config.toml
       sed -i '/runners.cache.s3\]/ a \      ServerAddress = "minio-service.minio.svc.cluster.local:9000" \n \     AccessKey = "${MINIO_ACCESS_KEY}" \n \     SecretKey = "${MINIO_SECRET_KEY}" \n \     BucketName = "runners-cache" \n \     Insecure = true' /etc/gitlab-runner/config.toml
+      sed -i '/runners.kubernetes.volumes\]/ a \      \[\[runners.kubernetes.volumes.host_path\]\] \n \       name = "docker" \n \       mount_path = "\/var\/run\/docker.sock" \n \       read_only = true \n \       host_path = "\/var\/run\/docker.sock"' /etc/gitlab-runner/config.toml
       # Start the runner
       /entrypoint run --user=gitlab-runner \
         --working-directory=/home/gitlab-runner
