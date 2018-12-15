@@ -1,0 +1,118 @@
+How to install GitLab on OpenShift Origin 3
+https://docs.gitlab.com/ee/install/openshift_and_gitlab/index.html
+
+Chakradhar Rao Jonagam (debianmaster) OpenShift Examples / GitLab CI with OpenShift (GitLab Runner)
+https://github.com/debianmaster/openshift-examples/tree/master/gitlab-ci-with-openshift
+
+Chakradhar Rao Jonagam (debianmaster) OpenShift Examples / GitLab CI with OpenShift (GitLab Runner RAW Format)
+https://raw.githubusercontent.com/debianmaster/openshift-examples/master/gitlab-ci-with-openshift/gitlab-runner.yaml
+
+GitLab Runner Kubernetes cache is ignored
+https://stackoverflow.com/questions/48670691/gitlab-runner-kubernetes-cache-is-ignored
+
+Managing Networking / Managing Pod Networks / Joining Project Networks
+https://docs.okd.io/3.11/admin_guide/managing_networking.html#joining-project-networks
+
+oc login -u silvio
+
+oc new-project gitlab-2
+
+oc new-project gitlab-infra
+
+oc new-project minio
+
+GITLAB_OKD_PROJECT_NAME=gitlab-2
+
+oc login -u system:admin
+
+oc adm policy add-scc-to-user anyuid system:serviceaccount:${GITLAB_OKD_PROJECT_NAME}:gitlab-ce-user
+
+oc adm pod-network join-projects --to=minio gitlab-2 gitlab-infra
+
+oc login -u silvio
+
+deploy minio
+
+create a bucket named "runners-cache"
+
+deploy gitlab-ce
+
+access gitlab-ce to create root password
+
+register a new user and logon with
+
+create a new project
+
+project / settings / CID/CD / runners 
+
+deploy gitlab-infra runners
+
+gitlab profile / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token
+
+git clone http://gitlab-ci-token:nuAN3_1P41ZG8Ad1UEh6@gitlab.apps.example.com/silvio.silva/ping.git
+
+cd ping
+
+copy project contents from /projects/maven/ping
+
+############################3
+
+oc adm policy add-scc-to-user anyuid -z default
+
+oc login -u silvio
+
+oc new-project ${GITLAB_OKD_PROJECT_NAME}
+
+deploy from gitlab-ce.yaml
+
+create gitlab-token from user config
+
+git clone https://gitlab-ci-token:<private token>@git.example.com/myuser/myrepo.git
+
+git clone http://gitlab-ping-token:eshYT79aHnBZRzR8xZiN@gitlab.apps.example.com/silvio.silva/ping.git
+
+GITLAB_OKD_PROJECT_NAME=gitlab-infra
+
+oc new-project ${GITLAB_OKD_PROJECT_NAME}
+
+oc adm policy add-scc-to-user anyuid -z gitlab-ce-user -n ${GITLAB_OKD_PROJECT_NAME}
+oc adm policy add-scc-to-user privileged -z gitlab-runner-user -n ${GITLAB_OKD_PROJECT_NAME}
+
+oc new-project minio
+
+minio template
+
+create a runners-cache bucket in Minio
+
+oc get netnamespaces
+
+oc adm pod-network join-projects --to=<project1> <project2> <project3>
+
+oc adm pod-network make-projects-global <project1> <project2>
+
+oc adm pod-network join-projects --to=minio gitlab-1 gitlab-infra
+
+oc delete project ${GITLAB_OKD_PROJECT_NAME} \
+--grace-period=0 \
+--force \
+--loglevel=8
+
+for project in minio gitlab-infra gitlab-1; do
+  oc delete project ${project} \
+  --grace-period=0 \
+  --force \
+  --loglevel=8;
+done
+
+[runners.cache]
+  Type = "s3"
+  Path = "files/"
+  Shared = true
+  [runners.cache.s3]
+    ServerAddress = "minio-service.minio.svc.cluster.local:9000"
+    AccessKey = "MY_MINIO_ACCESS_KEY"
+    SecretKey = "MY_MINIO_SECRET_KEY"
+    BucketName = "runners-cache"
+    Insecure = false
+
+oc get scc

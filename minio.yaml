@@ -1,0 +1,103 @@
+---
+kind: Template
+apiVersion: v1
+metadata:
+  name: "minio"
+  annotations:
+    iconClass: "icon-openshift"
+    description: "Minio Private Cloud Storage."
+    tags: "storage"
+labels:
+  createdBy: "minio-template"
+parameters:
+- description: "The name for the application. The service will be named like the application."
+  displayName: "Application name."
+  name: APPLICATION_NAME
+  value: "minio"
+  required: true
+- description: "Minio Access Key ID"
+  displayName: "Minio Access Key"
+  name: MINIO_ACCESS_KEY
+  value: "gitlab-runner"
+  required: true
+- description: "Minio Secret Key Value. Eg: jr923r9ru23ch2389rh"
+  displayName: "Minio Secret Key"
+  name: MINIO_SECRET_KEY
+  required: true
+- description: "Route to Access Minio Server Externaly"
+  displayName: "Route Host Name"
+  value: "minio.apps.example.com"
+  name: MINIO_ROUTE_HOST_NAME
+  required: true
+objects:
+- kind: PersistentVolumeClaim
+  apiVersion: v1
+  metadata:
+    name: minio-pv-claim
+    labels:
+      app: minio-storage-claim
+  spec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 2Gi
+    storageClassName: standard
+- kind: Deployment
+  apiVersion: extensions/v1beta1
+  metadata:
+    name: minio-deployment
+  spec:
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: minio
+      spec:
+        volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: minio-pv-claim
+        containers:
+        - name: minio
+          image: minio/minio
+          args:
+          - server
+          - /storage
+          env:
+          - name: MINIO_ACCESS_KEY
+            value: "${MINIO_ACCESS_KEY}"
+          - name: MINIO_SECRET_KEY
+            value: "${MINIO_SECRET_KEY}"
+          ports:
+          - containerPort: 9000
+          volumeMounts:
+          - name: storage # must match the volume name, above
+            mountPath: "/storage"
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: minio-service
+  spec:
+    type: LoadBalancer
+    ports:
+      - port: 9000
+        targetPort: 9000
+        protocol: TCP
+    selector:
+      app: minio
+- kind: Route
+  apiVersion: route.openshift.io/v1
+  metadata:
+    labels:
+      createdBy: minio-template
+    name: minio-service
+    namespace: minio
+  spec:
+    host: ${MINIO_ROUTE_HOST_NAME}
+    to:
+      kind: Service
+      name: minio-service
+      weight: 100
+    wildcardPolicy: None
