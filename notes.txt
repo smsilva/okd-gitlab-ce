@@ -13,21 +13,21 @@ https://stackoverflow.com/questions/48670691/gitlab-runner-kubernetes-cache-is-i
 Managing Networking / Managing Pod Networks / Joining Project Networks
 https://docs.okd.io/3.11/admin_guide/managing_networking.html#joining-project-networks
 
+GITLAB_OKD_PROJECT_NAME=gitlab-3
+
 oc login -u silvio
 
-oc new-project gitlab-2
+oc new-project $GITLAB_OKD_PROJECT_NAME
 
 oc new-project gitlab-infra
 
 oc new-project minio
 
-GITLAB_OKD_PROJECT_NAME=gitlab-2
-
 oc login -u system:admin
 
 oc adm policy add-scc-to-user anyuid system:serviceaccount:${GITLAB_OKD_PROJECT_NAME}:gitlab-ce-user
 
-oc adm pod-network join-projects --to=minio gitlab-2 gitlab-infra
+oc adm pod-network join-projects --to=minio $GITLAB_OKD_PROJECT_NAME gitlab-infra
 
 oc login -u silvio
 
@@ -41,21 +41,31 @@ access gitlab-ce to create root password
 
 register a new user and logon with
 
+gitlab profile / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token (gitlab-ci-token:gJRh1zvya_pUhCcokuo2)
+
 create a new project
 
-project / settings / CID/CD / runners 
-
-deploy gitlab-infra runners
-
-gitlab profile / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token
-
-git clone http://gitlab-ci-token:nuAN3_1P41ZG8Ad1UEh6@gitlab.apps.example.com/silvio.silva/ping.git
+git clone http://gitlab-ci-token:gJRh1zvya_pUhCcokuo2@gitlab.apps.example.com/silvio.silva/ping.git
 
 cd ping
 
 copy project contents from /projects/maven/ping
 
-############################3
+project / settings / CID/CD / runners 
+
+deploy gitlab-infra runner
+
+get a OKD access token
+
+oc login https://192.168.1.71:8443 --token=JCPc1dLYqCZc14AAhGchONgWowQm-qBnd9v94D5dUzg
+
+create a variable on gitlab OKD_TOKEN (project / settings / CI/CD / variables
+
+na primeira vez vai baixar as dependencias do Maven para criar o cache
+
+create a new project ping-example
+
+############################
 
 oc adm policy add-scc-to-user anyuid -z default
 
@@ -97,7 +107,7 @@ oc delete project ${GITLAB_OKD_PROJECT_NAME} \
 --force \
 --loglevel=8
 
-for project in minio gitlab-infra gitlab-1; do
+for project in ping-example minio gitlab-infra gitlab-2; do
   oc delete project ${project} \
   --grace-period=0 \
   --force \

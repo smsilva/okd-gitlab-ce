@@ -1,0 +1,61 @@
+---
+kind: Template
+apiVersion: v1
+metadata:
+  name: "ping-application"
+  annotations:
+    iconClass: "wildfly"
+    description: "Sample App deployed on top of WildFly."
+    tags: "devops-samples"
+labels:
+  createdBy: "ping-application-template"
+objects:
+- kind: ImageStream
+  apiVersion: v1
+  metadata:
+    name: ping
+  spec:
+  status:
+    dockerImageRepository: docker-registry.default.svc:5000/ping-example/ping
+    tags:
+    - items:
+      tag: "1.0"
+    - items:
+      tag: latest
+- kind: DeploymentConfig
+  apiVersion: v1
+  metadata:
+    labels:
+      app: ping
+    name: ping
+  spec:
+    replicas: 1
+    selector:
+      app: ping
+      deploymentconfig: ping
+    strategy:
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          app: ping
+          deploymentconfig: ping
+      spec:
+        containers:
+          - name: ping
+            image: ping
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+    triggers:
+      - type: ConfigChange
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+            - ping
+          from:
+            kind: ImageStreamTag
+            name: 'ping:1.0'
+            namespace: ping-example
+        type: ImageChange
