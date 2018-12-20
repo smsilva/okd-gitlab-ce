@@ -13,7 +13,7 @@ https://stackoverflow.com/questions/48670691/gitlab-runner-kubernetes-cache-is-i
 Managing Networking / Managing Pod Networks / Joining Project Networks
 https://docs.okd.io/3.11/admin_guide/managing_networking.html#joining-project-networks
 
-GITLAB_OKD_PROJECT_NAME=gitlab-3
+GITLAB_OKD_PROJECT_NAME=gitlab-1
 
 oc login -u silvio
 
@@ -23,11 +23,13 @@ oc new-project gitlab-infra
 
 oc new-project minio
 
+oc new-project ping-example
+
 oc login -u system:admin
 
 oc adm policy add-scc-to-user anyuid system:serviceaccount:${GITLAB_OKD_PROJECT_NAME}:gitlab-ce-user
 
-oc adm pod-network join-projects --to=minio $GITLAB_OKD_PROJECT_NAME gitlab-infra
+oc adm pod-network join-projects --to=minio gitlab-infra ${GITLAB_OKD_PROJECT_NAME}
 
 oc login -u silvio
 
@@ -41,29 +43,53 @@ access gitlab-ce to create root password
 
 register a new user and logon with
 
-gitlab profile / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token (gitlab-ci-token:gJRh1zvya_pUhCcokuo2)
+gitlab Profile Settings / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token (gitlab-ci-token:ouEssZ7JYzZMsa7DD1c6)
 
 create a new project
 
-git clone http://gitlab-ci-token:gJRh1zvya_pUhCcokuo2@gitlab.apps.example.com/silvio.silva/ping.git
+project / settings / CID/CD / runners
+
+oc adm policy add-scc-to-user privileged -z gitlab-runner-user -n gitlab-infra
+
+deploy gitlab-infra runner
+
+git clone http://gitlab-ci-token:ouEssZ7JYzZMsa7DD1c6@gitlab.apps.example.com/silvio.silva/ping.git
 
 cd ping
 
 copy project contents from /projects/maven/ping
 
-project / settings / CID/CD / runners 
+get an OKD access token
 
-deploy gitlab-infra runner
+oc describe sa gitlab-runner-user
 
-get a OKD access token
+oc describe sa gitlab-runner-user
+Name:                gitlab-runner-user
+Namespace:           gitlab-infra
+Labels:              createdBy=gitlab-runner-template
+Annotations:         <none>
+Image pull secrets:  gitlab-runner-user-dockercfg-bh92d
+Mountable secrets:   gitlab-runner-user-token-bbbcp
+                     gitlab-runner-user-dockercfg-bh92d
+Tokens:              gitlab-runner-user-token-8rf5p
+                     gitlab-runner-user-token-bbbcp
+Events:              <none>
 
-oc login https://192.168.1.71:8443 --token=JCPc1dLYqCZc14AAhGchONgWowQm-qBnd9v94D5dUzg
+oc describe secret gitlab-runner-user-token-bbbcp
+
+oc login https://192.168.1.71:8443 --token=JkTwOTeR7jLfK4JphF9WVsA-71RlNHhvN-QMj4iIdGw
 
 create a variable on gitlab OKD_TOKEN (project / settings / CI/CD / variables
 
-na primeira vez vai baixar as dependencias do Maven para criar o cache
+na primeira vez vai baixar:
 
-create a new project ping-example
+pulling image "maven:latest"
+
+as dependências do Maven para criar o cache
+
+pulling image "docker:stable"
+
+oc policy add-role-to-user system:image-puller system:serviceaccount:ping-example:default -n gitlab-infra
 
 ############################
 
@@ -107,6 +133,11 @@ oc delete project ${GITLAB_OKD_PROJECT_NAME} \
 --force \
 --loglevel=8
 
+oc delete project pindaiba \
+--grace-period=0 \
+--force \
+--loglevel=8
+
 for project in ping-example minio gitlab-infra gitlab-2; do
   oc delete project ${project} \
   --grace-period=0 \
@@ -134,3 +165,11 @@ docker login -u silvio -p XcKECl4JT0OMab9sKJAZvECCASRRWjO7S1dma8IIvUU docker-reg
 docker tag smsilva/ping:latest docker-registry.default.svc:5000/ping-example/ping:latest
 
 docker push docker-registry.default.svc:5000/ping-example/ping:latest
+
+#################
+
+Service Account
+
+oc policy add-role-to-user \
+  system:image-puller system:serviceaccount:gitlab-infra:gitlab-runner-user \
+  --namespace=ping-example

@@ -10,11 +10,6 @@ metadata:
 labels:
   createdBy: "minio-template"
 parameters:
-- description: "The name for the application. The service will be named like the application."
-  displayName: "Application name."
-  name: APPLICATION_NAME
-  value: "minio"
-  required: true
 - description: "Minio Access Key ID"
   displayName: "Minio Access Key"
   name: MINIO_ACCESS_KEY
