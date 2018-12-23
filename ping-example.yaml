@@ -10,24 +10,12 @@ metadata:
 labels:
   createdBy: "ping-application-template"
 objects:
-- kind: ImageStream
-  apiVersion: v1
-  metadata:
-    name: ping
-  spec:
-  status:
-    dockerImageRepository: docker-registry.default.svc:5000/ping-example/ping
-    tags:
-    - items:
-      tag: "1.0"
-    - items:
-      tag: latest
 - kind: DeploymentConfig
   apiVersion: v1
   metadata:
+    name: ping
     labels:
       app: ping
-    name: ping
   spec:
     replicas: 1
     selector:
@@ -42,8 +30,21 @@ objects:
           deploymentconfig: ping
       spec:
         containers:
-          - name: ping
-            image: ping
+        - name: ping
+          image: ping
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ping/api/time
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         schedulerName: default-scheduler
@@ -56,6 +57,38 @@ objects:
             - ping
           from:
             kind: ImageStreamTag
-            name: 'ping:1.0'
+            name: 'ping:latest'
             namespace: ping-example
         type: ImageChange
+- kind: Service
+  apiVersion: v1
+  metadata:
+    name: ping
+    labels:
+      app: ping
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      deploymentconfig: ping
+    sessionAffinity: None
+    type: ClusterIP
+- kind: Route
+  apiVersion: route.openshift.io/v1
+  metadata:
+    name: ping
+    labels:
+      app: ping
+  spec:
+    host: ping.apps.example.com
+    path: /ping/api/time
+    port:
+      targetPort: 8080-tcp
+    to:
+      kind: Service
+      name: ping
+      weight: 100
+    wildcardPolicy: None

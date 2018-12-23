@@ -1,3 +1,12 @@
+Managing Images
+https://docs.okd.io/latest/dev_guide/managing_images.html
+
+Service Accounts
+https://docs.okd.io/latest/dev_guide/service_accounts.html
+
+Remotely Push and Pull Container Images to OpenShift
+https://blog.openshift.com/remotely-push-pull-container-images-openshift/
+
 How to install GitLab on OpenShift Origin 3
 https://docs.gitlab.com/ee/install/openshift_and_gitlab/index.html
 
@@ -13,11 +22,11 @@ https://stackoverflow.com/questions/48670691/gitlab-runner-kubernetes-cache-is-i
 Managing Networking / Managing Pod Networks / Joining Project Networks
 https://docs.okd.io/3.11/admin_guide/managing_networking.html#joining-project-networks
 
-GITLAB_OKD_PROJECT_NAME=gitlab-1
+GITLAB_OKD_PROJECT_NAME=gitlab-2
 
 oc login -u silvio
 
-oc new-project $GITLAB_OKD_PROJECT_NAME
+oc new-project ${GITLAB_OKD_PROJECT_NAME}
 
 oc new-project gitlab-infra
 
@@ -27,59 +36,146 @@ oc new-project ping-example
 
 oc login -u system:admin
 
-oc adm policy add-scc-to-user anyuid system:serviceaccount:${GITLAB_OKD_PROJECT_NAME}:gitlab-ce-user
+oc adm policy \
+  add-scc-to-user anyuid \
+  system:serviceaccount:${GITLAB_OKD_PROJECT_NAME}:gitlab-ce-user
 
-oc adm pod-network join-projects --to=minio gitlab-infra ${GITLAB_OKD_PROJECT_NAME}
+oc adm pod-network \
+  join-projects \
+  --to=minio gitlab-infra ${GITLAB_OKD_PROJECT_NAME}
 
 oc login -u silvio
 
 deploy minio
 
+#wait for pulling minio/minio image
+
+#access Minio at: http://minio.apps.example.com
+Acces Key: MINIO_ACCESS_KEY (default: gitlab-runner)
+Secret Key: MINIO_SECRET_KEY (eg: jr923r9ru23ch2389rh)
+
 create a bucket named "runners-cache"
 
-deploy gitlab-ce
+deploy gitlab-ce at ${GITLAB_OKD_PROJECT_NAME}
 
-access gitlab-ce to create root password
+#wait for pulling images and PODs become ready (GitLab CE POD should take some minutes to start and become Ready)
+- gitlab/gitlab-ce:11.5.0-ce.0
+- redis:3.2.3-alpine
 
-register a new user and logon with
+#access gitlab-ce: http://gitlab.apps.example.com
 
-gitlab Profile Settings / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token (gitlab-ci-token:ouEssZ7JYzZMsa7DD1c6)
+#create a root password
 
-create a new project
+#register a new user and logon with
+
+gitlab Profile Settings / Access Tokens / Name: gitlab-ci-token, scope: api, create personal access token (gitlab-ci-token:2K3WZ2ZvxTkT7fXWoxxR)
+
+#got to http://gitlab.apps.example.com/ and click on "Create a project"
+- Project Name: ping
+- Visibility Level: Internal
 
 project / settings / CID/CD / runners
 
-oc adm policy add-scc-to-user privileged -z gitlab-runner-user -n gitlab-infra
+oc login -u system:admin
 
-deploy gitlab-infra runner
+oc adm policy \
+  add-scc-to-user privileged \
+  -z gitlab-runner-user \
+  -n gitlab-infra
 
-git clone http://gitlab-ci-token:ouEssZ7JYzZMsa7DD1c6@gitlab.apps.example.com/silvio.silva/ping.git
+#deploy gitlab-infra runner at gitlab-infra namespace with parameters: (get values from GitLab / Project Ping / Settings / CID/CD / runners / "Set up a specific Runner manually" section)
+- GitLab URL: http://gitlab.apps.example.com/
+- Registration Token: 
+- Minio Secret Key: MINIO_SECRET_KEY (eg: jr923r9ru23ch2389rh)
+
+#wait for pulling gitlab/gitlab-runner:alpine-v11.5.0
+
+# Allow system:serviceaccount:gitlab-infra:gitlab-runner-user Pull/Push Docker Images to "ping-example" namespace
+oc policy \
+  add-role-to-user edit \
+  system:serviceaccount:gitlab-infra:gitlab-runner-user \
+  --namespace ping-example
+
+git clone http://gitlab-ci-token:2K3WZ2ZvxTkT7fXWoxxR@gitlab.apps.example.com/silvio.silva/ping.git
 
 cd ping
 
-copy project contents from /projects/maven/ping
+#Get an OKD access token
 
-get an OKD access token
-
-oc describe sa gitlab-runner-user
-
-oc describe sa gitlab-runner-user
+oc describe sa gitlab-runner-user -n gitlab-infra
 Name:                gitlab-runner-user
 Namespace:           gitlab-infra
 Labels:              createdBy=gitlab-runner-template
 Annotations:         <none>
-Image pull secrets:  gitlab-runner-user-dockercfg-bh92d
-Mountable secrets:   gitlab-runner-user-token-bbbcp
-                     gitlab-runner-user-dockercfg-bh92d
-Tokens:              gitlab-runner-user-token-8rf5p
-                     gitlab-runner-user-token-bbbcp
+Image pull secrets:  gitlab-runner-user-dockercfg-7tbbh
+Mountable secrets:   gitlab-runner-user-token-cj5hm
+                     gitlab-runner-user-dockercfg-7tbbh
+Tokens:              gitlab-runner-user-token-cj5hm
+                     gitlab-runner-user-token-scggw
 Events:              <none>
 
-oc describe secret gitlab-runner-user-token-bbbcp
+oc describe secret gitlab-runner-user-token-scggw -n gitlab-infra
 
-oc login https://192.168.1.71:8443 --token=JkTwOTeR7jLfK4JphF9WVsA-71RlNHhvN-QMj4iIdGw
+TOKEN=eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJnaXRsYWItaW5mcmEiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiZ2l0bGFiLXJ1bm5lci11c2VyLXRva2VuLXNjZ2d3Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6ImdpdGxhYi1ydW5uZXItdXNlciIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6IjZlMDM3ZmExLTA2YjYtMTFlOS1hYjViLWZhMTYzZTcxNjRmMyIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpnaXRsYWItaW5mcmE6Z2l0bGFiLXJ1bm5lci11c2VyIn0.sMFEWg668-30K6C8Pq3S6UUmA6T2EXoVIkayWkNZeFRbnn1CsypjcZku7x36ZhCxxK0cWYrid0aoxCsr2W5S_wME3sout7Jj0PSkFMjjIWEa-vJvJiOHjil-3brJdCz470BDkgYMD_dp6WInt3hqQQKndMS8z2kqZEVC4gWtrpJaJlo6IgJzQlfp-BePgbvbqF2oVBucchBhwAb3ar-vEL9CvFFoG3AqNz1p9h8HQhZEcPHIpwAM2Ih8XBHcURHTbKUrvEjLGdLdr8cCqxS7XF0pvGsdYoJV_BNKWUfyzzBpaSxwme-vnlToiK3DmzDz3Cvb8TG4SSBc090T-vhTng
 
+# test login with token
+oc login --token=$TOKEN
+Logged into "https://master.example.com:8443" as "system:serviceaccount:gitlab-infra:gitlab-runner-user" using the token provided.
+
+You have access to the following projects and can switch between them with 'oc project <projectname>':
+
+  * gitlab-infra
+    ping-example
+
+Using project "gitlab-infra".
+
+# On GitLab Ping Project:
 create a variable on gitlab OKD_TOKEN (project / settings / CI/CD / variables
+
+#copy project contents from /projects/maven/ping
+
+git status
+
+#expected output:
+
+On branch master
+
+No commits yet
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+
+        .gitlab-ci.yml
+        Dockerfile
+        nb-configuration.xml
+        pom.xml
+        src/
+
+nothing added to commit but untracked files present (use "git add" to track)
+
+git add .
+
+git commit -m "First commit"
+
+#expected output:
+
+[master (root-commit) cb56f1f] First commit
+ 10 files changed, 181 insertions(+)
+ create mode 100644 .gitlab-ci.yml
+ create mode 100644 Dockerfile
+ create mode 100644 nb-configuration.xml
+ create mode 100644 pom.xml
+ create mode 100644 src/main/java/com/github/smsilva/ping/config/JAXRSConfiguration.java
+ create mode 100644 src/main/java/com/github/smsilva/ping/config/PingResource.java
+ create mode 100644 src/main/webapp/WEB-INF/jboss-web.xml
+ create mode 100644 src/main/webapp/WEB-INF/web.xml
+ create mode 100644 src/main/webapp/WEB-INF/weblogic.xml
+ create mode 100644 src/main/webapp/index.html
+
+#push changes to GitLab Ping Project
+git push origin master
+
+#Go to http://gitlab.apps.example.com/silvio.silva/ping/pipelines
 
 na primeira vez vai baixar:
 
@@ -89,23 +185,9 @@ as dependências do Maven para criar o cache
 
 pulling image "docker:stable"
 
-oc policy add-role-to-user system:image-puller system:serviceaccount:ping-example:default -n gitlab-infra
-
 ############################
 
 oc adm policy add-scc-to-user anyuid -z default
-
-oc login -u silvio
-
-oc new-project ${GITLAB_OKD_PROJECT_NAME}
-
-deploy from gitlab-ce.yaml
-
-create gitlab-token from user config
-
-git clone https://gitlab-ci-token:<private token>@git.example.com/myuser/myrepo.git
-
-git clone http://gitlab-ping-token:eshYT79aHnBZRzR8xZiN@gitlab.apps.example.com/silvio.silva/ping.git
 
 GITLAB_OKD_PROJECT_NAME=gitlab-infra
 
@@ -114,62 +196,14 @@ oc new-project ${GITLAB_OKD_PROJECT_NAME}
 oc adm policy add-scc-to-user anyuid -z gitlab-ce-user -n ${GITLAB_OKD_PROJECT_NAME}
 oc adm policy add-scc-to-user privileged -z gitlab-runner-user -n ${GITLAB_OKD_PROJECT_NAME}
 
-oc new-project minio
+oc login -u silvio
 
-minio template
+OKD_PROJECTS=$(oc get projects -o name | grep -v default | awk -F '/' '{ print $2}') && \
+echo ${OKD_PROJECTS}
 
-create a runners-cache bucket in Minio
-
-oc get netnamespaces
-
-oc adm pod-network join-projects --to=<project1> <project2> <project3>
-
-oc adm pod-network make-projects-global <project1> <project2>
-
-oc adm pod-network join-projects --to=minio gitlab-1 gitlab-infra
-
-oc delete project ${GITLAB_OKD_PROJECT_NAME} \
---grace-period=0 \
---force \
---loglevel=8
-
-oc delete project pindaiba \
---grace-period=0 \
---force \
---loglevel=8
-
-for project in ping-example minio gitlab-infra gitlab-2; do
+for project in ${OKD_PROJECTS}; do
   oc delete project ${project} \
   --grace-period=0 \
   --force \
   --loglevel=8;
 done
-
-[runners.cache]
-  Type = "s3"
-  Path = "files/"
-  Shared = true
-  [runners.cache.s3]
-    ServerAddress = "minio-service.minio.svc.cluster.local:9000"
-    AccessKey = "MY_MINIO_ACCESS_KEY"
-    SecretKey = "MY_MINIO_SECRET_KEY"
-    BucketName = "runners-cache"
-    Insecure = false
-
-oc get scc
-
-#################
-
-docker login -u silvio -p XcKECl4JT0OMab9sKJAZvECCASRRWjO7S1dma8IIvUU docker-registry.default.svc:5000
-
-docker tag smsilva/ping:latest docker-registry.default.svc:5000/ping-example/ping:latest
-
-docker push docker-registry.default.svc:5000/ping-example/ping:latest
-
-#################
-
-Service Account
-
-oc policy add-role-to-user \
-  system:image-puller system:serviceaccount:gitlab-infra:gitlab-runner-user \
-  --namespace=ping-example

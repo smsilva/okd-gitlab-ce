@@ -11,9 +11,10 @@ variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2"
   VERSION: "1.0"
   APP_NAME: "ping"
-  OKD_TARGET_NAMESPACE: "gitlab-infra"
   LOCAL_IMAGE: "gitlab-infra/ping"
-  DOCKER_REGISTRY: "docker-registry.default.svc:5000"
+  OKD_DOCKER_REGISTRY: "docker-registry.default.svc:5000"
+  OKD_TARGET_NAMESPACE: "ping-example"
+  OKD_REMOTE_IMAGE: "${OKD_DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}"
 
 maven build:
   image: maven:latest
@@ -29,8 +30,8 @@ docker build:
   stage: Image
   script:
     - docker build -t ${LOCAL_IMAGE}:${VERSION} -t ${LOCAL_IMAGE}:latest .
-    - docker login -u okd -p ${OKD_TOKEN} ${DOCKER_REGISTRY}
-    - docker tag ${LOCAL_IMAGE}:latest ${DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}:latest
-    - docker tag ${LOCAL_IMAGE}:latest ${DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}:${VERSION}
-    - docker push ${DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}:latest
-    - docker push ${DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}:${VERSION}
+    - docker login -u okd -p ${OKD_TOKEN} ${OKD_DOCKER_REGISTRY}
+    - docker tag ${LOCAL_IMAGE}:latest ${OKD_REMOTE_IMAGE}:latest
+    - docker tag ${LOCAL_IMAGE}:latest ${OKD_REMOTE_IMAGE}:${VERSION}
+    - docker push ${OKD_REMOTE_IMAGE}:latest
+    - docker push ${OKD_REMOTE_IMAGE}:${VERSION}
