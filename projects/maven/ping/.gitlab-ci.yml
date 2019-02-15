@@ -17,7 +17,7 @@ variables:
   OKD_REMOTE_IMAGE: "${OKD_DOCKER_REGISTRY}/${OKD_TARGET_NAMESPACE}/${APP_NAME}"
 
 maven build:
-  image: maven:latest
+  image: maven:3.6.0-jdk-8-slim
   stage: Build
   script:
     - mvn package
@@ -26,7 +26,7 @@ maven build:
       - target/*.war
 
 docker build:
-  image: docker:stable
+  image: docker:18.09.0
   stage: Image
   script:
     - docker build -t ${LOCAL_IMAGE}:${VERSION} -t ${LOCAL_IMAGE}:latest .
