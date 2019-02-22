@@ -42,7 +42,7 @@ oc adm policy \
 
 oc adm pod-network \
   join-projects \
-  --to=minio gitlab-infra ${GITLAB_OKD_PROJECT_NAME}
+  --to=minio gitlab-infra ${GITLAB_OKD_PROJECT_NAME} sonatype
 
 oc login -u silvio
 
@@ -207,3 +207,9 @@ for project in ${OKD_PROJECTS}; do
   --force \
   --loglevel=8;
 done
+
+Sonatype
+
+mvn sonar:sonar ^
+  -Dsonar.host.url=http://sonarqube-sonatype.apps.example.com ^
+  -Dsonar.login=cd1bfe92d13124f7e7b3bb684b17f00bafca0379
