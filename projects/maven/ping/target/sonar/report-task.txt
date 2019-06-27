@@ -1,0 +1,6 @@
+projectKey=com.github.smsilva:ping
+serverUrl=http://sonarqube-sonatype.apps.example.com
+serverVersion=6.7.0.33306
+dashboardUrl=http://sonarqube-sonatype.apps.example.com/dashboard/index/com.github.smsilva:ping
+ceTaskId=AWo2BxegOzF_EnPTORQo
+ceTaskUrl=http://sonarqube-sonatype.apps.example.com/api/ce/task?id=AWo2BxegOzF_EnPTORQo

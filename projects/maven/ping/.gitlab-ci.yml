@@ -21,6 +21,7 @@ maven build:
   stage: Build
   script:
     - mvn package
+    - mvn sonar:sonar -Dsonar.host.url=http://sonarqube.sonatype.svc:9000 -Dsonar.login=${SONARQUBE_TOKEN}
   artifacts:
     paths:
       - target/*.war
