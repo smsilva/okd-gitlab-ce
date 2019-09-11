@@ -212,4 +212,8 @@ Sonatype
 
 mvn sonar:sonar ^
   -Dsonar.host.url=http://sonarqube-sonatype.apps.example.com ^
-  -Dsonar.login=cd1bfe92d13124f7e7b3bb684b17f00bafca0379
+  -Dsonar.login=74a5e05f9224f228571d15f83eb3ad94316babd4
+
+mvn sonar:sonar \
+  -Dsonar.host.url=http://sonarqube-sonatype.apps.example.com \
+  -Dsonar.login=74a5e05f9224f228571d15f83eb3ad94316babd4
